@@ -17,52 +17,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate directory indexes
+      - name: Create simple index generator script
         run: |
-          find . -type d -not -path "./.git/*" | while read dir; do
-            cat > "$dir/index.html" << HTML_EOF
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>File List</title>
-<style>
-body { font-family: Arial, sans-serif; margin: 40px; }
-ul { list-style: none; padding: 0; }
-li { margin: 8px 0; }
-a { text-decoration: none; color: #0366d6; }
-a:hover { text-decoration: underline; }
-.dir { font-weight: bold; }
-</style>
-</head>
-<body>
-<h1>File List</h1>
-<ul>
-HTML_EOF
-
-            if [ "$dir" != "." ]; then
-              echo '<li><a href="../" class="dir">../</a></li>' >> "$dir/index.html"
-            fi
-
-            for item in "$dir"/*; do
-              if [ -e "$item" ]; then
-                name=$(basename "$item")
-                if [ "$name" != "index.html" ] && [ "$name" != ".git" ]; then
-                  if [ -d "$item" ]; then
-                    echo "<li><a href=\"$name/\" class=\"dir\">$name/</a></li>" >> "$dir/index.html"
-                  else
-                    echo "<li><a href=\"$name\">$name</a></li>" >> "$dir/index.html"
-                  fi
-                fi
-              fi
-            done
-
-            cat >> "$dir/index.html" << HTML_EOF
-</ul>
-</body>
-</html>
-HTML_EOF
-          done
+          echo '#!/bin/bash' > generate_index.sh
+          echo 'for dir in $(find . -type d -not -path "./.git/*"); do' >> generate_index.sh
+          echo '  echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>File List</title><style>body{font-family:Arial;margin:40px;}ul{list-style:none;padding:0;}li{margin:8px 0;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}</style></head><body><h1>File List</h1><ul>" > "$dir/index.html"' >> generate_index.sh
+          echo '  if [ "$dir" != "." ]; then echo "<li><a href=\"../\" class=\"dir\">../</a></li>" >> "$dir/index.html"; fi' >> generate_index.sh
+          echo '  for item in "$dir"/*; do' >> generate_index.sh
+          echo '    if [ -e "$item" ]; then' >> generate_index.sh
+          echo '      name=$(basename "$item")' >> generate_index.sh
+          echo '      if [ "$name" != "index.html" ] && [ "$name" != ".git" ]; then' >> generate_index.sh
+          echo '        if [ -d "$item" ]; then' >> generate_index.sh
+          echo '          echo "<li><a href=\"$name/\" class=\"dir\">$name/</a></li>" >> "$dir/index.html"' >> generate_index.sh
+          echo '        else' >> generate_index.sh
+          echo '          echo "<li><a href=\"$name\">$name</a></li>" >> "$dir/index.html"' >> generate_index.sh
+          echo '        fi' >> generate_index.sh
+          echo '      fi' >> generate_index.sh
+          echo '    fi' >> generate_index.sh
+          echo '  done' >> generate_index.sh
+          echo '  echo "</ul></body></html>" >> "$dir/index.html"' >> generate_index.sh
+          echo 'done' >> generate_index.sh
+          
+          chmod +x generate_index.sh
+          ./generate_index.sh
 
       - name: Commit and push index files
         run: |
