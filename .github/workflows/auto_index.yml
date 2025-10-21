@@ -2,7 +2,7 @@ name: Generate Directory Indexes
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -19,24 +19,25 @@ jobs:
 
       - name: Generate directory indexes
         run: |
-          cat > generate_index.py << 'EOF'
+          cat << 'SCRIPT_EOF' > generate_index.py
 import os
 
 def generate_index_html(directory):
     if '.git' in directory:
         return
     
-    rel_path = directory[2:] if directory.startswith('./') else directory
-    
     items = []
-    for item in sorted(os.listdir(directory)):
-        if item in ['.git', 'index.html']:
-            continue
-        item_path = os.path.join(directory, item)
-        items.append({
-            'name': item,
-            'is_dir': os.path.isdir(item_path)
-        })
+    try:
+        for item in sorted(os.listdir(directory)):
+            if item in ['.git', 'index.html']:
+                continue
+            item_path = os.path.join(directory, item)
+            items.append({
+                'name': item,
+                'is_dir': os.path.isdir(item_path)
+            })
+    except:
+        return
     
     html_content = '''<!DOCTYPE html>
 <html>
@@ -54,8 +55,7 @@ a:hover { text-decoration: underline; }
 </head>
 <body>
 <h1>File List</h1>
-<ul>
-'''
+<ul>'''
     
     if directory != '.':
         html_content += '<li><a href="../" class="dir">../</a></li>'
@@ -71,14 +71,17 @@ a:hover { text-decoration: underline; }
 </body>
 </html>'''
     
-    with open(os.path.join(directory, 'index.html'), 'w', encoding='utf-8') as f:
-        f.write(html_content)
+    try:
+        with open(os.path.join(directory, 'index.html'), 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    except:
+        pass
 
 for root, dirs, files in os.walk('.'):
     if '.git' in root:
         continue
     generate_index_html(root)
-EOF
+SCRIPT_EOF
           python3 generate_index.py
 
       - name: Commit and push index files
