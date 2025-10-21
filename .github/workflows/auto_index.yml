@@ -17,72 +17,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
       - name: Generate directory indexes
         run: |
-          python3 -c "
-import os
+          find . -type d -not -path "./.git/*" | while read dir; do
+            cat > "$dir/index.html" << HTML_EOF
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>File List</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 40px; }
+ul { list-style: none; padding: 0; }
+li { margin: 8px 0; }
+a { text-decoration: none; color: #0366d6; }
+a:hover { text-decoration: underline; }
+.dir { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>File List</h1>
+<ul>
+HTML_EOF
 
-for root, dirs, files in os.walk('.'):
-    if '.git' in root:
-        continue
-        
-    items = []
-    try:
-        for item in sorted(os.listdir(root)):
-            if item in ['.git', 'index.html']:
-                continue
-            item_path = os.path.join(root, item)
-            items.append({
-                'name': item,
-                'is_dir': os.path.isdir(item_path)
-            })
-    except:
-        continue
-    
-    html_parts = []
-    html_parts.append('<!DOCTYPE html>')
-    html_parts.append('<html>')
-    html_parts.append('<head>')
-    html_parts.append('<meta charset=\\'UTF-8\\'>')
-    html_parts.append('<title>File List</title>')
-    html_parts.append('<style>')
-    html_parts.append('body { font-family: Arial, margin: 40px; }')
-    html_parts.append('ul { list-style: none; padding: 0; }')
-    html_parts.append('li { margin: 8px 0; }')
-    html_parts.append('a { text-decoration: none; color: #0366d6; }')
-    html_parts.append('a:hover { text-decoration: underline; }')
-    html_parts.append('.dir { font-weight: bold; }')
-    html_parts.append('</style>')
-    html_parts.append('</head>')
-    html_parts.append('<body>')
-    html_parts.append('<h1>File List</h1>')
-    html_parts.append('<ul>')
-    
-    if root != '.':
-        html_parts.append('<li><a href=\\'../\\' class=\\'dir\\'>../</a></li>')
-    
-    for item in items:
-        name = item['name']
-        if item['is_dir']:
-            html_parts.append(f'<li><a href=\\'{name}/\\' class=\\'dir\\'>{name}/</a></li>')
-        else:
-            html_parts.append(f'<li><a href=\\'{name}\\'>{name}</a></li>')
-    
-    html_parts.append('</ul>')
-    html_parts.append('</body>')
-    html_parts.append('</html>')
-    
-    try:
-        with open(os.path.join(root, 'index.html'), 'w', encoding='utf-8') as f:
-            f.write('\n'.join(html_parts))
-    except:
-        pass
-"
+            if [ "$dir" != "." ]; then
+              echo '<li><a href="../" class="dir">../</a></li>' >> "$dir/index.html"
+            fi
+
+            for item in "$dir"/*; do
+              if [ -e "$item" ]; then
+                name=$(basename "$item")
+                if [ "$name" != "index.html" ] && [ "$name" != ".git" ]; then
+                  if [ -d "$item" ]; then
+                    echo "<li><a href=\"$name/\" class=\"dir\">$name/</a></li>" >> "$dir/index.html"
+                  else
+                    echo "<li><a href=\"$name\">$name</a></li>" >> "$dir/index.html"
+                  fi
+                fi
+              fi
+            done
+
+            cat >> "$dir/index.html" << HTML_EOF
+</ul>
+</body>
+</html>
+HTML_EOF
+          done
 
       - name: Commit and push index files
         run: |
