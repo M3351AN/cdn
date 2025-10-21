@@ -79,7 +79,6 @@ for root, dirs, files in os.walk('.'):
         continue
     generate_index_html(root)
 EOF
-
           python3 generate_index.py
 
       - name: Commit and push index files
