@@ -1,0 +1,95 @@
+name: Generate Directory Indexes
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  generate-index:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate directory indexes
+        run: |
+          cat > generate_index.py << 'EOF'
+import os
+
+def generate_index_html(directory):
+    if '.git' in directory:
+        return
+    
+    rel_path = directory[2:] if directory.startswith('./') else directory
+    
+    items = []
+    for item in sorted(os.listdir(directory)):
+        if item in ['.git', 'index.html']:
+            continue
+        item_path = os.path.join(directory, item)
+        items.append({
+            'name': item,
+            'is_dir': os.path.isdir(item_path)
+        })
+    
+    html_content = '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>File List</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 40px; }
+ul { list-style: none; padding: 0; }
+li { margin: 8px 0; }
+a { text-decoration: none; color: #0366d6; }
+a:hover { text-decoration: underline; }
+.dir { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>File List</h1>
+<ul>
+'''
+    
+    if directory != '.':
+        html_content += '<li><a href="../" class="dir">../</a></li>'
+    
+    for item in items:
+        name = item['name']
+        if item['is_dir']:
+            html_content += f'<li><a href="{name}/" class="dir">{name}/</a></li>'
+        else:
+            html_content += f'<li><a href="{name}">{name}</a></li>'
+    
+    html_content += '''</ul>
+</body>
+</html>'''
+    
+    with open(os.path.join(directory, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+for root, dirs, files in os.walk('.'):
+    if '.git' in root:
+        continue
+    generate_index_html(root)
+EOF
+
+          python3 generate_index.py
+
+      - name: Commit and push index files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update directory indexes [skip ci]"
+            git push
+          fi
