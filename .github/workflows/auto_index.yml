@@ -27,7 +27,12 @@ jobs:
         run: |
           echo '#!/bin/bash' > generate_index.sh
           echo 'find . -type d -not -path "./.git/*" -not -path "./.github/*" | while read dir; do' >> generate_index.sh
-          echo '  echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>File List</title><style>body{font-family:Arial;margin:40px;}ul{list-style:none;padding:0;}li{margin:8px 0;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}</style></head><body><h1>File List</h1><ul>" > "$dir/index.html"' >> generate_index.sh
+          echo '  if [ "$dir" = "." ]; then' >> generate_index.sh
+          echo '    current_path="/"' >> generate_index.sh
+          echo '  else' >> generate_index.sh
+          echo '    current_path="/${dir#./}"' >> generate_index.sh
+          echo '  fi' >> generate_index.sh
+          echo '  echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>File List - $current_path</title><style>body{font-family:Arial;margin:40px;}ul{list-style:none;padding:0;}li{margin:8px 0;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}.path{color:#666;margin-bottom:20px;}</style></head><body><h1>File List</h1><div class=\"path\">Current directory: <strong>$current_path</strong></div><ul>" > "$dir/index.html"' >> generate_index.sh
           echo '  if [ "$dir" != "." ]; then echo "<li><a href=\"../\" class=\"dir\">../</a></li>" >> "$dir/index.html"; fi' >> generate_index.sh
           echo '  for item in "$dir"/*; do' >> generate_index.sh
           echo '    if [ -e "$item" ]; then' >> generate_index.sh
@@ -46,10 +51,6 @@ jobs:
           
           chmod +x generate_index.sh
           ./generate_index.sh
-
-      - name: Clean up script file
-        run: |
-          rm -f generate_index.sh
 
       - name: Commit and push index files
         run: |
