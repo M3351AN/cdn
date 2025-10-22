@@ -42,7 +42,7 @@ jobs:
           echo '      if [ -d "$item" ]; then' >> generate_index.sh
           echo '        class="dir"' >> generate_index.sh
           echo '        name="$name/"' >> generate_index.sh
-          echo '        size="-"'" >> generate_index.sh
+          echo '        size="-"' >> generate_index.sh
           echo '      else' >> generate_index.sh
           echo '        class=""' >> generate_index.sh
           echo '        size=$(ls -lh "$item" | awk '\''{print $5}'\'')' >> generate_index.sh
