@@ -42,9 +42,16 @@ jobs:
           echo '    if [ -e "$item" ]; then' >> generate_index.sh
           echo '      name=$(basename "$item")' >> generate_index.sh
           echo '      if [ -d "$item" ]; then' >> generate_index.sh
-          echo '        # For directories, get the latest commit time excluding index.html changes' >> generate_index.sh
-          echo '        timestamp=$(git log -1 --format="%ct" -- "$item" -- . ":(exclude)$dir/index.html" 2>/dev/null)' >> generate_index.sh
-          echo '        if [ -z "$timestamp" ]; then' >> generate_index.sh
+          echo '        # For directories, find all files in the directory except index.html and get the latest commit time' >> generate_index.sh
+          echo '        timestamp=0' >> generate_index.sh
+          echo '        for file in $(find "$item" -type f -not -name "index.html"); do' >> generate_index.sh
+          echo '          file_timestamp=$(git log -1 --format="%ct" -- "$file" 2>/dev/null)' >> generate_index.sh
+          echo '          if [ -n "$file_timestamp" ] && [ "$file_timestamp" -gt "$timestamp" ]; then' >> generate_index.sh
+          echo '            timestamp=$file_timestamp' >> generate_index.sh
+          echo '          fi' >> generate_index.sh
+          echo '        done' >> generate_index.sh
+          echo '        # If no files found (empty directory), use directory creation time' >> generate_index.sh
+          echo '        if [ "$timestamp" -eq 0 ]; then' >> generate_index.sh
           echo '          timestamp=$(git log -1 --format="%ct" -- "$item" 2>/dev/null)' >> generate_index.sh
           echo '        fi' >> generate_index.sh
           echo '        class="dir"' >> generate_index.sh
