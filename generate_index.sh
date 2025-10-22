@@ -15,9 +15,16 @@ generate_index() {
     if [ -e "$item" ]; then
       name=$(basename "$item")
       if [ -d "$item" ]; then
-        # For directories, get the latest commit time excluding index.html changes
-        timestamp=$(git log -1 --format="%ct" -- "$item" -- . ":(exclude)$dir/index.html" 2>/dev/null)
-        if [ -z "$timestamp" ]; then
+        # For directories, find all files in the directory except index.html and get the latest commit time
+        timestamp=0
+        for file in $(find "$item" -type f -not -name "index.html"); do
+          file_timestamp=$(git log -1 --format="%ct" -- "$file" 2>/dev/null)
+          if [ -n "$file_timestamp" ] && [ "$file_timestamp" -gt "$timestamp" ]; then
+            timestamp=$file_timestamp
+          fi
+        done
+        # If no files found (empty directory), use directory creation time
+        if [ "$timestamp" -eq 0 ]; then
           timestamp=$(git log -1 --format="%ct" -- "$item" 2>/dev/null)
         fi
         class="dir"
