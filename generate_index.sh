@@ -8,27 +8,50 @@ generate_index() {
   fi
   echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Index of $current_path</title><style>body{font-family:Arial;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}th{background-color:#f2f2f2;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}</style></head><body><h1>Index of $current_path</h1><table><tr><th>Name</th><th>Size</th><th>Last Modified</th></tr>" > "$dir/index.html"
   if [ "$dir" != "." ]; then echo "<tr><td><a href=\"../\" class=\"dir\">../</a></td><td>-</td><td></td></tr>" >> "$dir/index.html"; fi
-  dirs=$(find "$dir" -maxdepth 1 -mindepth 1 -type d -not -name ".git" -not -name ".github" -exec ls -td {} + 2>/dev/null)
-  files=$(find "$dir" -maxdepth 1 -mindepth 1 -type f -not -name "index.html" -exec ls -td {} + 2>/dev/null)
-  items="$dirs"$'\n'"$files"
+  # Get all items in directory except index.html, .git and .github
+  items=$(find "$dir" -maxdepth 1 -mindepth 1 -not -name "index.html" -not -name ".git" -not -path "./.github/*")
+  # Process each item and get Git timestamp for sorting
   echo "$items" | while read item; do
     if [ -e "$item" ]; then
       name=$(basename "$item")
       if [ -d "$item" ]; then
+        # For directories, get the latest commit time excluding index.html changes
+        timestamp=$(git log -1 --format="%ct" -- "$item" -- . ":(exclude)$dir/index.html" 2>/dev/null)
+        if [ -z "$timestamp" ]; then
+          timestamp=$(git log -1 --format="%ct" -- "$item" 2>/dev/null)
+        fi
         class="dir"
         name="$name/"
         size="-"
       else
+        # For files, get the latest commit time
+        timestamp=$(git log -1 --format="%ct" -- "$item" 2>/dev/null)
         class=""
-        size=$(ls -lh "$item" | awk '{print $5}')
+        # Get file size from Git
+        size=$(git cat-file -s HEAD:"$item" 2>/dev/null)
+        if [ -n "$size" ]; then
+          if [ $size -ge 1048576 ]; then
+            size=$(echo "scale=1; $size/1048576" | bc)MB
+          elif [ $size -ge 1024 ]; then
+            size=$(echo "scale=1; $size/1024" | bc)KB
+          else
+            size="${size}B"
+          fi
+        else
+          size="-"
+        fi
       fi
-      if [ -d "$item" ]; then
-        mod_time=""
+      # Convert timestamp to readable format
+      if [ -n "$timestamp" ]; then
+        mod_time=$(date -d "@$timestamp" "+%Y-%m-%d %H:%M" 2>/dev/null)
       else
-        mod_time=$(git log -1 --format="%ci" -- "$item" | cut -d" " -f1,2)
+        mod_time=""
       fi
-      echo "<tr><td><a href=\"$name\" class=\"$class\">$name</a></td><td>$size</td><td>$mod_time</td></tr>" >> "$dir/index.html"
+      # Output for sorting
+      echo "$timestamp|$class|$name|$size|$mod_time|$item"
     fi
+  done | sort -t"|" -k1,1nr | while IFS="|" read -r timestamp class name size mod_time item; do
+    echo "<tr><td><a href=\"$name\" class=\"$class\">$name</a></td><td>$size</td><td>$mod_time</td></tr>" >> "$dir/index.html"
   done
   echo "</table></body></html>" >> "$dir/index.html"
 }
