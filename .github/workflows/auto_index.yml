@@ -49,7 +49,7 @@ jobs:
           echo '        fi' >> generate_index.sh
           echo '        class="dir"' >> generate_index.sh
           echo '        name="$name/"' >> generate_index.sh
-          echo '        size="-"'" >> generate_index.sh
+          echo '        size="-"' >> generate_index.sh
           echo '      else' >> generate_index.sh
           echo '        # For files, get the latest commit time' >> generate_index.sh
           echo '        timestamp=$(git log -1 --format="%ct" -- "$item" 2>/dev/null)' >> generate_index.sh
