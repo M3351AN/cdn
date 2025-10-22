@@ -57,8 +57,7 @@ generate_index() {
       # Output for sorting
       echo "$timestamp|$class|$name|$size|$mod_time|$item"
     fi
-  done | sort -t"|" -k2,2 -k1,1nr | while IFS="|" read -r timestamp class name size mod_time item; do
-    echo "<tr><td><a href=\"$name\" class=\"$class\">$name</a></td><td>$size</td><td>$mod_time</td></tr>" >> "$dir/index.html"
+  done | sort -t"|" -k2,2r -k1,1nr | while IFS="|" read -r timestamp class name size mod_time item; do echo     echo "<tr><td><a href=\"$name\" class=\"$class\">$name</a></td><td>$size</td><td>$mod_time</td></tr>" >> "$dir/index.html"
   done
   echo "</table></body></html>" >> "$dir/index.html"
 }
