@@ -65,7 +65,7 @@ jobs:
           echo '            size="${size}B"' >> generate_index.sh
           echo '          fi' >> generate_index.sh
           echo '        else' >> generate_index.sh
-          echo '          size="-"'" >> generate_index.sh
+          echo '          size="-"' >> generate_index.sh
           echo '        fi' >> generate_index.sh
           echo '      fi' >> generate_index.sh
           echo '      # Convert timestamp to readable format' >> generate_index.sh
