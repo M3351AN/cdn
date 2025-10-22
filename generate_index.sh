@@ -1,23 +1,31 @@
 #!/bin/bash
-find . -type d -not -path "./.git/*" -not -path "./.github/*" | while read dir; do
+generate_index() {
+  dir="$1"
   if [ "$dir" = "." ]; then
     current_path="/"
   else
     current_path="/${dir#./}"
   fi
-  echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>File List - $current_path</title><style>body{font-family:Arial;margin:40px;}ul{list-style:none;padding:0;}li{margin:8px 0;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}.path{color:#666;margin-bottom:20px;}</style></head><body><h1>File List</h1><div class=\"path\">Current directory: <strong>$current_path</strong></div><ul>" > "$dir/index.html"
-  if [ "$dir" != "." ]; then echo "<li><a href=\"../\" class=\"dir\">../</a></li>" >> "$dir/index.html"; fi
-  for item in "$dir"/*; do
+  echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Index of $current_path</title><style>body{font-family:Arial;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}th{background-color:#f2f2f2;}a{text-decoration:none;color:#0366d6;}a:hover{text-decoration:underline;}.dir{font-weight:bold;}</style></head><body><h1>Index of $current_path</h1><table><tr><th>Name</th><th>Size</th><th>Last Modified</th></tr>" > "$dir/index.html"
+  if [ "$dir" != "." ]; then echo "<tr><td><a href=\"../\" class=\"dir\">../</a></td><td>-</td><td></td></tr>" >> "$dir/index.html"; fi
+  items=$(find "$dir" -maxdepth 1 -mindepth 1 -not -name "index.html" -not -name ".git" -not -path "./.github/*" -exec ls -td {} + | sort -f)
+  echo "$items" | while read item; do
     if [ -e "$item" ]; then
       name=$(basename "$item")
-      if [ "$name" != "index.html" ] && [ "$name" != ".git" ]; then
-        if [ -d "$item" ]; then
-          echo "<li><a href=\"$name/\" class=\"dir\">$name/</a></li>" >> "$dir/index.html"
-        else
-          echo "<li><a href=\"$name\">$name</a></li>" >> "$dir/index.html"
-        fi
+      if [ -d "$item" ]; then
+        class="dir"
+        name="$name/"
+        size="-"
+      else
+        class=""
+        size=$(ls -lh "$item" | awk '{print $5}')
       fi
+      mod_time=$(ls -l --time-style="+%Y-%m-%d %H:%M" "$item" | awk '{print $6, $7}')
+      echo "<tr><td><a href=\"$name\" class=\"$class\">$name</a></td><td>$size</td><td>$mod_time</td></tr>" >> "$dir/index.html"
     fi
   done
-  echo "</ul></body></html>" >> "$dir/index.html"
+  echo "</table></body></html>" >> "$dir/index.html"
+}
+find . -type d -not -path "./.git/*" -not -path "./.github/*" | while read dir; do
+  generate_index "$dir"
 done
